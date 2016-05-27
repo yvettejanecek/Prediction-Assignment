@@ -1,0 +1,68 @@
+---
+title: "Weight Lifting Exercise Prediction"
+author: "Yvette Janecek, May 26, 2016"
+output: 
+  html_document: 
+    keep_md: yes
+---
+###Overview  
+This project will predict the manner in which an exercise is done.  The data for this project is the Weight Lifting Exercise (WLE) Dataset from http://groupware.les.inf.puc-rio.br/har.  
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(caret)
+library(randomForest)
+pmltraining <- read.csv("pml-training.csv")
+pmltesting <- read.csv("pml-testing.csv")
+```
+
+###PreProcessing  
+The structure of the data was viewed.  Observations which were blank or included divion by zero were replaced with "NA."  Then observations with NA were removed.  Since the first seven variables were relating to subject and time identification, they were removed from the data.  (This included the variables X, user-name, raw-timestamp-part1, raw-timestamp-part2, cvtd-timestamp, new-window, and num-window.)  
+
+```{r tidy, echo=TRUE, results="hide"}
+str(pmltraining)
+pmltraining[1:7, 1:5]
+pmltraining <- read.csv("pml-training.csv",na.strings=c("NA","#DIV/0!", ""))
+data <- pmltraining[8:ncol(pmltraining)]
+data <- data[,apply(data,2,function(x) !any(is.na(x)))]
+str(data)
+dim <- dim(data)
+```
+
+Once complete, there were still `r dim[1]` observations of `r dim[2]` variables.  The remaining variables are:  
+```{r variables, echo=FALSE}
+names(data)
+```
+
+###Modeling and Prediction  
+The model was developed using the Random Forests method.  This method was selected because it is "unexcelled in accuracy among current algorithms," as described by the authors of the method.  Though unnecessary to develop the model in this method, the data was split into a set for training the model and a set for testing the model.  The testing set was created simply to show the high accuracy of this model.  Additional information on the Random Forests method of can be found at http://www.stat.berkeley.edu/~breiman/RandomForests/cc_home.htm.  
+The model can be used to predict the class of an exercise.  See http://groupware.les.inf.puc-rio.br/har for more information.  
+
+```{r model and predict, echo=TRUE, results="hide"}
+index <- createDataPartition(data$classe, p=0.75)[[1]]
+trainSet <- data[index,]
+testSet <- data[-index,]
+trainSet$classe <- factor(trainSet$classe)
+testSet$classe <- factor(testSet$classe)
+dim(trainSet)
+dim(testSet)
+set.seed(42)
+model <- randomForest(classe~., data=trainSet)
+predict <- predict(model, newdata=testSet)
+predict.cm <- confusionMatrix(predict, testSet$classe)
+accuracy <- 100*(predict.cm$overall["Accuracy"])
+```
+
+The resultant model is: 
+```{r model, echo=FALSE}
+model
+```
+
+Statisics on the prediction of this model include the following:  
+```{r predit, echo=FALSE}
+predict.cm
+```
+
+This model is predicted to be accuracte `r round(accuracy, 2)`% of the time.  
+
+_^conclusion^_
